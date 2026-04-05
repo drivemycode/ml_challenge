@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import numpy as np
 import string
+import os
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import StratifiedKFold, cross_val_score
@@ -23,7 +24,9 @@ def contains_word(text, word):
     return 1 if word in words else 0
 
 """Preprocessing Phase"""
-df = pd.read_csv("ml_challenge_dataset.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
+df = pd.read_csv(csv_path)
 cols = df.columns
 emotion = cols[2]
 feel_text_col = cols[3]
@@ -131,13 +134,13 @@ y = df["Painting"].values # store the vector of targets
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-nb_model = GaussianNB(var_smoothing=0.325)
+nb_model = GaussianNB()
 scores = cross_val_score(nb_model, X_scaled, y, cv=cv, scoring='accuracy')
 print(f"NB CV Accuracy: {scores.mean()} +/- {scores.std()}")
 
 # Store results
 results = []
-var_smoothing_options = [2875e-4, 3e-1, 3125e-4, 322e-3, 325e-3, 33e-2]
+var_smoothing_options = [3e-1, 35e-2, 4e-1, 5e-1, 6e-1]
 
 for vs in var_smoothing_options:
     nb = GaussianNB(var_smoothing=vs)

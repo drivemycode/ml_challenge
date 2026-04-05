@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import numpy as np
 import string
+import os
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import StratifiedKFold, cross_val_score
@@ -23,7 +24,9 @@ def contains_word(text, word):
     return 1 if word in words else 0
 
 """Preprocessing Phase"""
-df = pd.read_csv("ml_challenge_dataset.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
+df = pd.read_csv(csv_path)
 cols = df.columns
 emotion = cols[2]
 feel_text_col = cols[3]
@@ -136,13 +139,13 @@ scores = cross_val_score(lr_model, X_scaled, y, cv=cv, scoring='accuracy')
 print(f"Logistic regression CV Accuracy: {scores.mean()} +/- {scores.std()}")
 
 # Store results
-regularizer_vals = [0.01, 0.05, 0.075, 0.1, 0.125, 0.15, 1.0]
+regularizer_vals = [0.0875, 0.095, 0.0975, 0.1, 0.1025, 0.105, 0.1125]
 results = []
 
 for rv in regularizer_vals:
     lr = LogisticRegression(C=rv, max_iter=1000, random_state=42)
     scores = cross_val_score(lr, X_scaled, y, cv=cv, scoring='accuracy')
-    print(f"Regularizer value={rv}, Max iterations: {1000}: {scores.mean():.4f} +/- {scores.std():.4f}")
+    print(f"Regularizer value={rv}, Max iterations: {1000}: {scores.mean()} +/- {scores.std()}")
     results.append((scores.mean(), scores.std(), 1000, rv))
 
 results.sort(key=lambda x: x[0], reverse=True)

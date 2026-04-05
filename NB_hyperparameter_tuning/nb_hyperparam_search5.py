@@ -2,6 +2,7 @@ from joblib import Parallel, delayed
 import pandas as pd
 import re
 import numpy as np
+import os
 import string
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
@@ -9,6 +10,9 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import cross_val_predict
 from sklearn.metrics import confusion_matrix
+
+# Best accuracy: 0.8108 +/- 0.0163
+# Hyperparameters for this accuracy: var_smoothing = 0.325
 
 def parse_likert(x):
     if pd.isna(x):
@@ -23,7 +27,10 @@ def contains_word(text, word):
     return 1 if word in words else 0
 
 """Preprocessing Phase"""
-df = pd.read_csv("ml_challenge_dataset.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
+df = pd.read_csv(csv_path)
+
 cols = df.columns
 emotion = cols[2]
 feel_text_col = cols[3]
@@ -135,8 +142,9 @@ nb_model = GaussianNB()
 scores = cross_val_score(nb_model, X_scaled, y, cv=cv, scoring='accuracy')
 print(f"NB CV Accuracy: {scores.mean()} +/- {scores.std()}")
 
-var_smoothing_options = [1e-9, 1e-7, 1e-5, 1e-3, 1e-1]
+# Store results
 results = []
+var_smoothing_options = [275e-3, 3e-1, 325e-3, 35e-2, 375e-3]
 
 for vs in var_smoothing_options:
     nb = GaussianNB(var_smoothing=vs)

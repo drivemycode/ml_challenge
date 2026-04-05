@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import numpy as np
 import string
+import os
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import StratifiedKFold, cross_val_score
@@ -23,7 +24,9 @@ def contains_word(text, word):
     return 1 if word in words else 0
 
 """Preprocessing Phase"""
-df = pd.read_csv("ml_challenge_dataset.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
+df = pd.read_csv(csv_path)
 cols = df.columns
 emotion = cols[2]
 feel_text_col = cols[3]
@@ -127,24 +130,24 @@ mean = X.mean(axis=0) # axis=0 => row, axis=1 => column
 std = X.std(axis=0)
 X_scaled = (X - mean) / std # abuse of syntax notation. pandas makes the syntax look too simple for what the instruction actually does
 
-y = df["Painting"].values  # store the vector of targets
+y = df["Painting"].values # store the vector of targets
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-lr_model = LogisticRegression()
-scores = cross_val_score(lr_model, X_scaled, y, cv=cv, scoring='accuracy')
-print(f"Logistic regression CV Accuracy: {scores.mean()} +/- {scores.std()}")
+nb_model = GaussianNB()
+scores = cross_val_score(nb_model, X_scaled, y, cv=cv, scoring='accuracy')
+print(f"NB CV Accuracy: {scores.mean()} +/- {scores.std()}")
 
 # Store results
-regularizer_vals = [0.0975, 0.099, 0.1, 0.101, 0.1025]
 results = []
+var_smoothing_options = [1e-3, 1e-1, 2e-1, 3e-1]
 
-for rv in regularizer_vals:
-    lr = LogisticRegression(C=rv, max_iter=1000, random_state=42)
-    scores = cross_val_score(lr, X_scaled, y, cv=cv, scoring='accuracy')
-    print(f"Regularizer value={rv}, Max iterations: {1000}: {scores.mean()} +/- {scores.std()}")
-    results.append((scores.mean(), scores.std(), 1000, rv))
+for vs in var_smoothing_options:
+    nb = GaussianNB(var_smoothing=vs)
+    scores = cross_val_score(nb, X_scaled, y, cv=cv, scoring='accuracy')
+    print(f"var_smoothing={vs}: {scores.mean():.4f} +/- {scores.std():.4f}")
+    results.append((scores.mean(), scores.std(), vs))
 
 results.sort(key=lambda x: x[0], reverse=True)
 best = results[0]
-print(f"\nBest regularizer_val: {best[3]}, max_iter: {best[2]}, accuracy: {best[0]}, std dev: {best[1]}")
+print(f"\nBest var_smoothing: {best[2]}, accuracy: {best[0]}, std dev: {best[1]}")

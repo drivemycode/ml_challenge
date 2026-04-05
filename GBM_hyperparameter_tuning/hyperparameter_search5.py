@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import numpy as np
 import string
+import os
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.ensemble import GradientBoostingClassifier
@@ -22,7 +23,9 @@ def contains_word(text, word):
     return 1 if word in words else 0
 
 """Preprocessing Phase"""
-df = pd.read_csv("ml_challenge_dataset.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
+df = pd.read_csv(csv_path)
 cols = df.columns
 emotion = cols[2]
 feel_text_col = cols[3]
@@ -142,7 +145,7 @@ def evaluate_config(num, depth, rate):
 
 
 
-n_estimators_options = [100, 150, 200]
+n_estimators_options = [700, 750, 800]
 max_depth_options = [2, 3, 4, 5]
 learning_rate_options = [0.01, 0.03, 0.05, 0.07, 0.1, 0.15, 0.2]
 
