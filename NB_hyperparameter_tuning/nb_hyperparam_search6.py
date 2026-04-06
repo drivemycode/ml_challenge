@@ -3,7 +3,9 @@ import pandas as pd
 import re
 import numpy as np
 import string
+import os
 from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import cross_val_predict
@@ -22,7 +24,9 @@ def contains_word(text, word):
     return 1 if word in words else 0
 
 """Preprocessing Phase"""
-df = pd.read_csv("ml_challenge_dataset.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
+df = pd.read_csv(csv_path)
 cols = df.columns
 emotion = cols[2]
 feel_text_col = cols[3]
@@ -43,11 +47,11 @@ df["content"] = df[raw_content].apply(parse_likert)
 df["calm"] = df[raw_calm].apply(parse_likert)
 df["uneasy"] = df[raw_uneasy].apply(parse_likert)
 
-# FEEL_KEYWORDS = ["time", "sad", "clocks", "melting", 
+# FEEL_KEYWORDS = ["time", "sad", "clocks", "melting",
 #             "passing", "sky", "night", "quiet", "wonder",
 #             "happy", "warm", "nature", "joyful", "bright"]
 
-FEEL_KEYWORDS = ["time", "sad", "clocks", "melting", 
+FEEL_KEYWORDS = ["time", "sad", "clocks", "melting",
             "passing", "sky", "night", "quiet", "wonder",
             "happy", "warm", "nature", "joyful", "bright",
             "relaxed", "awe", "content"]
@@ -59,13 +63,13 @@ for kw in FEEL_KEYWORDS:
     )
 
 sountrack_keyword_cols = []
-# SOUNDTRACK_KEYWORDS = ["sad", "time", "quiet", "low", "violin", 
+# SOUNDTRACK_KEYWORDS = ["sad", "time", "quiet", "low", "violin",
 #                        "wind", "eerie", "sombre", "ticking", "classical",
 #                        "calming", "peaceful", "night", "emotional", "jazz",
 #                        "strings", "happy", "upbeat", "light", "birds", "gentle",
 #                        "chirping", "nature", "flute", "bright"]
 
-SOUNDTRACK_KEYWORDS = ["sad", "time", "quiet", "low", "violin", 
+SOUNDTRACK_KEYWORDS = ["sad", "time", "quiet", "low", "violin",
                        "wind", "eerie", "sombre", "ticking", "classical",
                        "calming", "peaceful", "night", "emotional", "jazz",
                        "strings", "happy", "upbeat", "light", "birds", "gentle",
@@ -78,10 +82,10 @@ for kw in SOUNDTRACK_KEYWORDS:
 
 
 food_keyword_cols = []
-# FOOD_KEYWORDS = ["bread", "cheese", "pizza", "cake", "soup", 
+# FOOD_KEYWORDS = ["bread", "cheese", "pizza", "cake", "soup",
 #                  "blueberry", "salad", "fresh", "green", "matcha"]
 
-FOOD_KEYWORDS = ["bread", "cheese", "pizza", "cake", "soup", 
+FOOD_KEYWORDS = ["bread", "cheese", "pizza", "cake", "soup",
                  "blueberry", "salad", "fresh", "green", "matcha",
                  "chocolate", "fruit", "tea", "strawberry"]
 for kw in FOOD_KEYWORDS:
@@ -120,7 +124,7 @@ medians = df[numeric_cols].median() # returns a series of medians across all col
 df[numeric_cols] = df[numeric_cols].fillna(medians) # for each column, pandas fills the NaN vals of that column with the median of the column
 # no need to do the same for binary_cols because if an entry is NaN for a binary column, the value stored is 0
 
-# Normalize 
+# Normalize
 X = df[feature_cols].values # data matrix
 mean = X.mean(axis=0) # axis=0 => row, axis=1 => column
 std = X.std(axis=0)
@@ -130,34 +134,20 @@ y = df["Painting"].values # store the vector of targets
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-def evaluate_config(num, depth, rate):
-    gb = GradientBoostingClassifier(
-        n_estimators=num,
-        max_depth=depth,
-        learning_rate=rate, 
-        random_state=42
-    )
-    scores = cross_val_score(gb, X_scaled, y, cv=cv, scoring='accuracy')
-    return scores.mean(), num, depth, rate
+nb_model = GaussianNB(var_smoothing=0.325)
+scores = cross_val_score(nb_model, X_scaled, y, cv=cv, scoring='accuracy')
+print(f"NB CV Accuracy: {scores.mean()} +/- {scores.std()}")
 
+# Store results
+results = []
+var_smoothing_options = [2875e-4, 3e-1, 3125e-4, 322e-3, 325e-3, 33e-2]
 
-
-n_estimators_options = [700, 750, 800]
-max_depth_options = [2, 3, 4, 5]
-learning_rate_options = [0.01, 0.03, 0.05, 0.07, 0.1, 0.15, 0.2]
-
-configs = [(num, depth, rate) for num in n_estimators_options for depth in max_depth_options for rate in learning_rate_options]
-results = Parallel(n_jobs=-1)(
-    delayed(evaluate_config)(num, depth, rate)
-    for num, depth, rate in configs
-)
+for vs in var_smoothing_options:
+    nb = GaussianNB(var_smoothing=vs)
+    scores = cross_val_score(nb, X_scaled, y, cv=cv, scoring='accuracy')
+    print(f"var_smoothing={vs}: {scores.mean():.4f} +/- {scores.std():.4f}")
+    results.append((scores.mean(), scores.std(), vs))
 
 results.sort(key=lambda x: x[0], reverse=True)
 best = results[0]
-curr_best = 0.8956156831071234
-print(f"Best accuracy: {best[0]}")
-print(f"Best config: n_estimators={best[1]}, max_depth={best[2]}, learning_rate={best[3]}")
-if best[0] > curr_best:
-    print("Found a better config!")
-else:
-    print("Failed to find a better config :(")
+print(f"\nBest var_smoothing: {best[2]}, accuracy: {best[0]}, std dev: {best[1]}")
