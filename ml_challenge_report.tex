@@ -133,10 +133,10 @@ We first tested Gradient Boosting on the same 21 features, achieving approximate
 \subsection*{Naive Bayes}
 To explore further, we evaluated Naive Bayes (NB) classifiers as a lightweight baseline. NB classifiers are, as shown in our lectures, well-suited for classification with features that can be assumed to be conditionally independent given the class labels. Since our dataset is a hybrid between binary indicator variables and continuous normalized features, with \textbf{70/77} of the dataset being \textbf{binary} and \textbf{7/77} being \textbf{numerical}, we investigated two variants of NB classifiers which would best capture the input data distribution.
 
-\subsubsection*{Gaussian Naive Bayes}
+\subsubsection*{Variant 1: Gaussian Naive Bayes}
 We first experimented with the Gaussian NB. This was a natural approach because our features were \textbf{normalized} during pre-processing to have a mean of 0 and a variance of 1, and Gaussian NB assumes that the features follow a \textbf{Gaussian distribution}, which the normalized continuous features approximately follow. Using 5-fold stratified cross-validation, we tuned the hyperparameter \textit{var\_smoothing} and achieved a maximum CV accuracy of \textbf{81.08\%} with $var\_smoothing = 0.325$. The normalization of the dataset reduced the variance of each feature, hence the larger smoothing value.
 
-\subsubsection*{Bernoulli Naive Bayes}
+\subsubsection*{Variant 2: Bernoulli Naive Bayes}
 We experimented with Bernoulli NB as it is well-suited for unnormalized binary data. Bernoulli NB is specifically designed for binary features, representing each feature as a Bernoulli random variable, and \textbf{70/77} features in our dataset are binary. We hypothesized that the Bernoulli NB would be a stronger candidate because it captures binary data features more accurately. We also used \textbf{unnormalized} data to preserve the binary nature of the features. Using 5-fold stratified cross-validation, we achieved an accuracy of \textbf{85.74\%} - noticeably higher than the Gaussian NB. This was achieved with the smoothing hyperparameter $alpha=0.215$ and the threshold hyperparameter $binarize=0.0$ (which sets features greater than 0 equal to 1, and 0 otherwise).
 
 \subsection*{The Ensembles}
