@@ -131,13 +131,13 @@ We first tested Gradient Boosting on the same 21 features, achieving approximate
 
 
 \subsection*{Naive Bayes}
-To explore further, we evaluated Naive Bayes (NB) classifiers as a lightweight baseline. NB classifiers are, as shown in our lectures, well-suited for classification with features that can be assumed to be conditionally independent given the class labels. Since our dataset is a hybrid between binary indicator variables and continuous normalized features, with \textbf{70/77} of the dataset being \textbf{binary} and \textbf{7/77} being \textbf{numerical}, we investigated two variants of NB classifiers which would best capture the input data distribution.
+Our feature engineering resulted in a hybrid of binary and numerical features, with 70/77 features being binary/categorical (for example, the "room" indicator variables) and 7/77 being numerical (such as the "emotion intensity"). This meant that no model could accurately "capture" the underlying distribution in the features. Because of this, we chose to explore two different variants of the Naive Bayes models.
 
 \subsubsection*{Variant 1: Gaussian Naive Bayes}
-We first experimented with the Gaussian NB. This was a natural approach because our features were \textbf{normalized} during pre-processing to have a mean of 0 and a variance of 1, and Gaussian NB assumes that the features follow a \textbf{Gaussian distribution}, which the normalized continuous features approximately follow. Using 5-fold stratified cross-validation, we tuned the hyperparameter \textit{var\_smoothing} and achieved a maximum CV accuracy of \textbf{81.08\%} with $var\_smoothing = 0.325$. The normalization of the dataset reduced the variance of each feature, hence the larger smoothing value.
+We wanted to first see which Naive Bayes could perform best if we kept our data normalized for consistency if put in an ensemble. Gaussian NB assumes that the features follow a \textbf{Gaussian distribution}, which the normalized continuous features approximately follow. Using 5-fold stratified cross-validation, we tuned the hyperparameter \textit{var\_smoothing} and achieved a maximum CV accuracy of \textbf{81.08\%} with $var\_smoothing = 0.325$. The normalization of the dataset reduced the variance of each feature, hence the larger smoothing value.
 
 \subsubsection*{Variant 2: Bernoulli Naive Bayes}
-We experimented with Bernoulli NB as it is well-suited for unnormalized binary data. Bernoulli NB is specifically designed for binary features, representing each feature as a Bernoulli random variable, and \textbf{70/77} features in our dataset are binary. We hypothesized that the Bernoulli NB would be a stronger candidate because it captures binary data features more accurately. We also used \textbf{unnormalized} data to preserve the binary nature of the features. Using 5-fold stratified cross-validation, we achieved an accuracy of \textbf{85.74\%} - noticeably higher than the Gaussian NB. This was achieved with the smoothing hyperparameter $alpha=0.215$ and the threshold hyperparameter $binarize=0.0$ (which sets features greater than 0 equal to 1, and 0 otherwise).
+We determined that the Bernoulli NB would be a stronger candidate because it captures binary data features more accurately, and \textbf{70/77} of our dataset was binary. However this required the data to be kept as \textbf{unnormalized} which posed a larger issue in our ensembles. Using 5-fold stratified cross-validation, we achieved  \textbf{85.74\%} accuracy - significantly higher than the Gaussian NB. This was achieved with the smoothing hyperparameter $alpha=0.215$ and the threshold hyperparameter $binarize=0.0$ (which sets features greater than 0 equal to 1, and 0 otherwise). In our hyperparameter tuning, lower alpha values tend to underfit, and higher binarize values tend to underfit, and from our exhaustive grid search, these were the best hyperparameters.
 
 \subsection*{The Ensembles}
 We concluded the hyperparameter tuning portion of the models by comparing their accuracies and performance both individually and when incorporated into a majority vote ensemble with Gradient Boosting and Logistic Regression.
@@ -159,10 +159,7 @@ Ensemble (Bernoulli NB) & 0.8915 & 0.0081 \\
 \bottomrule
 \end{tabular}
 \end{table}
-Both ensemble accuracies were \textbf{below} the Gradient Boosting
-model's standalone accuracy of \textbf{89.74\%}. Notably, the ensemble
-incorporating Bernoulli NB (\textbf{89.15\%}) performed slightly worse than
-the one incorporating Gaussian NB (\textbf{89.38\%}) despite
+As expected, both ensemble accuracies fell below the GBM accuracy because the Naive Bayes accuracies were significantly lower than Logistic Regression and GBM. The more surprising result was that the ensemble incorporating Bernoulli NB (\textbf{89.15\%}) performed slightly worse than the one incorporating Gaussian NB (\textbf{89.38\%}) despite
 Bernoulli NB having a higher standalone accuracy. This is
 because the ensemble uses a majority vote mechanism, and Bernoulli
 NB was trained and optimized on \textbf{unnormalized} data, while Gradient
