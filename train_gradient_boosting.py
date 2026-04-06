@@ -127,41 +127,102 @@ gb_model = GradientBoostingClassifier(
     learning_rate=0.15,
     random_state=42
     )
+# gb_model.fit(X_scaled, y)
+# Extracting the structure of 200 tree estimators
+# all_features = []
+# all_thresholds = []
+# all_left = []
+# all_right = []
+# all_values = []
+
+# for i in range(gb_model.n_estimators):
+#     for j in range(gb_model.n_classes_):
+#         tree = gb_model.estimators_[i][j].tree_
+#         all_features.append(tree.feature)
+#         all_thresholds.append(tree.threshold)
+#         all_left.append(tree.children_left)
+#         all_right.append(tree.children_right)
+#         all_values.append(tree.value.flatten())
+
+
+# max_nodes = 7 # every tree either has 5 or 7 nodes
+# 600 because for each round, we create 3 decision trees one for each painting
+# features_arr = np.zeros((600, max_nodes), dtype=int)
+# thresholds_arr = np.zeros((600, max_nodes))
+# left_arr = np.zeros((600, max_nodes), dtype=int)
+# right_arr = np.zeros((600, max_nodes), dtype=int)
+# values_arr = np.zeros((600, max_nodes))
+
+# for i in range(600):
+#     n = len(all_features[i])
+#     features_arr[i, :n] = all_features[i]
+#     thresholds_arr[i, :n] = all_thresholds[i]
+#     left_arr[i, :n] = all_left[i]
+#     right_arr[i, :n] = all_right[i]
+#     values_arr[i, :n] = all_values[i]
+
+# get the initial predictions 
+# init_scores = gb_model.init_.class_prior_ # initial guess by the model
+# np.savez("gb_model_params.npz",
+#          features=features_arr,
+#          thresholds=thresholds_arr,
+#          left=left_arr,
+#          right=right_arr,
+#          values=values_arr,
+#          init_scores=init_scores,
+#          learning_rate=np.array([gb_model.learning_rate]),
+#          classes=gb_model.classes_,
+#          scaler_mean=mean,
+#          scaler_std=std,
+#          medians=medians.values
+#         )
 
 # Best HP: n_estimators=200, max_depth=2, learning_rate=0.15, random_state=42
 # Best accuracy: 0.8973890752023598 +/- 0.0055242001390046125
-scores = cross_val_score(gb_model, X_scaled, y, cv=cv, scoring='accuracy')
-print(f"CV Accuracy: {scores.mean()} +/- {scores.std()}")
+# scores = cross_val_score(gb_model, X_scaled, y, cv=cv, scoring='accuracy')
+# print(f"CV Accuracy: {scores.mean()} +/- {scores.std()}")
 
 # Uncomment the section below to show ROC curve
 # ================================================
-# cv_probs = cross_val_predict(gb_model, X_scaled, y, cv=cv, method='predict_proba')
+cv_probs = cross_val_predict(gb_model, X_scaled, y, cv=cv, method='predict_proba')
 
-# classes = gb_model.fit(X_scaled, y).classes_
-# y_bin = label_binarize(y, classes=classes)
+classes = gb_model.fit(X_scaled, y).classes_
+y_bin = label_binarize(y, classes=classes)
 
-# for i, label in enumerate(classes):
-#     fpr, tpr, _ = roc_curve(y_bin[:, i], cv_probs[:, i])
-#     roc_auc = auc(fpr, tpr)
-#     plt.plot(fpr, tpr, label=f"{label} (AUC={roc_auc})")
+for i, label in enumerate(classes):
+    fpr, tpr, _ = roc_curve(y_bin[:, i], cv_probs[:, i])
+    roc_auc = auc(fpr, tpr)
+    plt.plot(fpr, tpr, label=f"{label} (AUC={roc_auc})")
 
-# plt.plot([0, 1], [0, 1], 'k--')
-# plt.xlabel('False Positive Rate')
-# plt.ylabel('True Positive Rate')
-# plt.title('ROC Curves (One-vs-Rest)')
-# plt.legend(loc='lower right')
-# plt.show()
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curves (One-vs-Rest)')
+plt.legend(loc='lower right')
+plt.show()
 # ================================================
 
 # Uncomment the section below to see the confusion matrix
 # ================================================
 # cv_preds = cross_val_predict(gb_model, X_scaled, y, cv=cv)
 # labels = ["The Persistence of Memory", "The Starry Night", "The Water Lily Pond"]
+# short_labels = ["Persistence\nof Memory", "Starry\nNight", "Water Lily\nPond"]
 # cm = confusion_matrix(y, cv_preds, labels=labels)
-# print("Confusion Matrix (rows=actual, cols=predicted):")
-# print(f"{'':>30s} {'Persistence':>12s} {'Starry':>12s} {'Water Lily':>12s}")
-# for i, label in enumerate(labels):                                                                               
-#       print(f"{label:>30s} {cm[i][0]:>12d} {cm[i][1]:>12d} {cm[i][2]:>12d}")
+# fig, ax = plt.subplots(figsize=(7, 6))
+# im = ax.imshow(cm, interpolation='nearest', cmap='Blues')
+# ax.figure.colorbar(im, ax=ax)
+# ax.set(xticks=np.arange(cm.shape[1]), yticks=np.arange(cm.shape[0]),
+#        xticklabels=short_labels, yticklabels=short_labels,
+#        ylabel='Actual', xlabel='Predicted',
+#        title='Confusion Matrix (5-Fold Cross-Validation)')
+# for i in range(cm.shape[0]):
+#     for j in range(cm.shape[1]):
+#         ax.text(j, i, format(cm[i, j], 'd'),
+#                 ha='center', va='center',
+#                 color='white' if cm[i, j] > cm.max() / 2 else 'black', fontsize=14)
+# plt.tight_layout()
+# plt.savefig('confusion_matrix.png', dpi=150)
+# plt.show()
 # ================================================
 
 
