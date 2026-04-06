@@ -1,18 +1,13 @@
-from joblib import Parallel, delayed
+# Best alpha: 0.215, binarize: 0.0, accuracy: 0.8546924657173459, std dev: 0.01540543724161127
 import pandas as pd
 import re
 import numpy as np
-import os
 import string
+import os
+from sklearn.naive_bayes import GaussianNB, BernoulliNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import BernoulliNB
-from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.model_selection import cross_val_predict
-from sklearn.metrics import confusion_matrix
-
-# Best accuracy: 0.8108 +/- 0.0163
-# Hyperparameters for this accuracy: var_smoothing = 0.325
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 def parse_likert(x):
     if pd.isna(x):
@@ -26,10 +21,8 @@ def contains_word(text, word):
     words = str(text).lower().translate(str.maketrans("", "", string.punctuation)).split()
     return 1 if word in words else 0
 
-"""Preprocessing Phase"""
-script_dir = os.path.dirname(os.path.abspath(__file__))
-csv_path = os.path.join(script_dir, "..", "ml_challenge_dataset.csv")
-df = pd.read_csv(csv_path)
+# Load data
+df = pd.read_csv("ml_challenge_dataset.csv")
 
 cols = df.columns
 emotion = cols[2]
@@ -51,9 +44,6 @@ df["content"] = df[raw_content].apply(parse_likert)
 df["calm"] = df[raw_calm].apply(parse_likert)
 df["uneasy"] = df[raw_uneasy].apply(parse_likert)
 
-# FEEL_KEYWORDS = ["time", "sad", "clocks", "melting",
-#             "passing", "sky", "night", "quiet", "wonder",
-#             "happy", "warm", "nature", "joyful", "bright"]
 
 FEEL_KEYWORDS = ["time", "sad", "clocks", "melting",
             "passing", "sky", "night", "quiet", "wonder",
@@ -67,11 +57,6 @@ for kw in FEEL_KEYWORDS:
     )
 
 sountrack_keyword_cols = []
-# SOUNDTRACK_KEYWORDS = ["sad", "time", "quiet", "low", "violin",
-#                        "wind", "eerie", "sombre", "ticking", "classical",
-#                        "calming", "peaceful", "night", "emotional", "jazz",
-#                        "strings", "happy", "upbeat", "light", "birds", "gentle",
-#                        "chirping", "nature", "flute", "bright"]
 
 SOUNDTRACK_KEYWORDS = ["sad", "time", "quiet", "low", "violin",
                        "wind", "eerie", "sombre", "ticking", "classical",
@@ -86,8 +71,6 @@ for kw in SOUNDTRACK_KEYWORDS:
 
 
 food_keyword_cols = []
-# FOOD_KEYWORDS = ["bread", "cheese", "pizza", "cake", "soup",
-#                  "blueberry", "salad", "fresh", "green", "matcha"]
 
 FOOD_KEYWORDS = ["bread", "cheese", "pizza", "cake", "soup",
                  "blueberry", "salad", "fresh", "green", "matcha",
@@ -111,8 +94,6 @@ SEASONS = ["Spring", "Summer", "Fall", "Winter"]
 for season in SEASONS:
     df[season] = df[raw_season].apply(lambda x, c=season: 1 if pd.notna(x) and c in str(x) else 0)
 
-# df["dark_mood"] = df["sombre"] + df["uneasy"] - df["calm"] - df["content"]
-# df["season_certainty"] = df["Spring"] + df["Summer"] + df["Fall"] + df["Winter"]
 
 numeric_cols = [emotion, raw_prominent_colors, raw_objects_caught_eye, "sombre", "content", "calm", "uneasy"]
 
@@ -138,22 +119,71 @@ y = df["Painting"].values # store the vector of targets
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-nb_model = BernoulliNB()
-scores = cross_val_score(nb_model, X, y, cv=cv, scoring='accuracy')
-print(f"NB CV Accuracy: {scores.mean()} +/- {scores.std()}")
+from sklearn.model_selection import cross_val_score
 
-# Store results
-results = []
-alphas = [2e-1, 2e-2, 21e-2, 215e-3, 22e-2, 23e-2, 24e-2, 25e-2, 26e-2, 225e-3, 224e-3, 226e-3]
-binarizes = [None, 0.0, 0.5, 1.0]
+gb_scores = cross_val_score(
+    GradientBoostingClassifier(n_estimators=200, max_depth=2, learning_rate=0.15, random_state=42),
+    X_scaled, y, cv=cv, scoring='accuracy'
+)
+lr_scores = cross_val_score(
+    LogisticRegression(C=0.1, max_iter=1000, random_state=42),
+    X_scaled, y, cv=cv, scoring='accuracy'
+)
+gnb_scores = cross_val_score(
+    GaussianNB(var_smoothing=0.325),
+    X_scaled, y, cv=cv, scoring='accuracy'
+)
+bnb_scores = cross_val_score(
+    BernoulliNB(alpha=0.215, binarize=0.0),
+    X, y, cv=cv, scoring='accuracy'
+)
 
-for a in alphas:
-    for b in binarizes:
-        nb = BernoulliNB(alpha=a, binarize=b)
-        scores = cross_val_score(nb, X, y, cv=cv, scoring='accuracy')
-        print(f"alpha={a}, binarize = {b}: {scores.mean():.4f} +/- {scores.std():.4f}")
-        results.append((scores.mean(), scores.std(), a, b))
+print(f"GBM alone:          {gb_scores.mean():.4f} +/- {gb_scores.std():.4f}")
+print(f"LR alone:           {lr_scores.mean():.4f} +/- {lr_scores.std():.4f}")
+print(f"Gaussian NB alone:  {gnb_scores.mean():.4f} +/- {gnb_scores.std():.4f}")
+print(f"Bernoulli NB alone: {bnb_scores.mean():.4f} +/- {bnb_scores.std():.4f}")
 
-results.sort(key=lambda x: x[0], reverse=True)
-best = results[0]
-print(f"\nBest alpha: {best[2]}, binarize: {best[3]}, accuracy: {best[0]}, std dev: {best[1]}")
+from sklearn.model_selection import StratifiedKFold
+
+fold_accuracies_gnb = []
+fold_accuracies_bnb = []
+
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+for train_idx, test_idx in skf.split(X_scaled, y):
+    # Get test predictions for each model on this fold
+    gb = GradientBoostingClassifier(n_estimators=200, max_depth=2, learning_rate=0.15, random_state=42)
+    lr = LogisticRegression(C=0.1, max_iter=1000, random_state=42)
+    gnb = GaussianNB(var_smoothing=0.325)
+    bnb = BernoulliNB(alpha=0.215, binarize=0.0)
+
+    # Fit on train fold
+    gb.fit(X_scaled[train_idx], y[train_idx])
+    lr.fit(X_scaled[train_idx], y[train_idx])
+    gnb.fit(X_scaled[train_idx], y[train_idx])
+    bnb.fit(X[train_idx], y[train_idx])
+
+    # Predict on test fold
+    gb_p = gb.predict(X_scaled[test_idx])
+    lr_p = lr.predict(X_scaled[test_idx])
+    gnb_p = gnb.predict(X_scaled[test_idx])
+    bnb_p = bnb.predict(X[test_idx])
+
+    # Majority vote for GNB ensemble
+    fold_preds_gnb = []
+    for g, l, n in zip(gb_p, lr_p, gnb_p):
+        votes = [g, l, n]
+        unique, counts = np.unique(votes, return_counts=True)
+        fold_preds_gnb.append(unique[np.argmax(counts)])
+    fold_accuracies_gnb.append((np.array(fold_preds_gnb) == y[test_idx]).mean())
+
+    # Majority vote for BNB ensemble
+    fold_preds_bnb = []
+    for g, l, n in zip(gb_p, lr_p, bnb_p):
+        votes = [g, l, n]
+        unique, counts = np.unique(votes, return_counts=True)
+        fold_preds_bnb.append(unique[np.argmax(counts)])
+    fold_accuracies_bnb.append((np.array(fold_preds_bnb) == y[test_idx]).mean())
+
+print(f"Ensemble with Gaussian NB: {np.mean(fold_accuracies_gnb):.4f} +/- {np.std(fold_accuracies_gnb):.4f}")
+print(f"Ensemble with Bernoulli NB: {np.mean(fold_accuracies_bnb):.4f} +/- {np.std(fold_accuracies_bnb):.4f}")

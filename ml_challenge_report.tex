@@ -129,15 +129,53 @@ While logistic regression uses linear decision boundaries, some painting distinc
 
 We first tested Gradient Boosting on the same 21 features, achieving approximately 86\% CV accuracy---a clear improvement over logistic regression. We then incorporated the keyword binary features from all three text columns (feelings, soundtrack, food), bringing the feature set to 77 dimensions. This further improved accuracy to approximately 89.7\%.
 
+
+\subsection*{Naive Bayes}
+To explore further, we evaluated Naive Bayes (NB) classifiers as a lightweight baseline. NB classifiers are, as shown in our lectures, well-suited for classification with features that can be assumed to be conditionally independent given the class labels. Since our dataset is a hybrid between binary indicator variables and continuous normalized features, with \textbf{70/77} of the dataset being \textbf{binary} and \textbf{7/77} being \textbf{numerical}, we investigated two variants of NB classifiers which would best capture the input data distribution.
+
+\subsubsection*{Gaussian Naive Bayes}
+We first experimented with the Gaussian NB. This was a natural approach because our features were \textbf{normalized} during pre-processing to have a mean of 0 and a variance of 1, and Gaussian NB assumes that the features follow a \textbf{Gaussian distribution}, which the normalized continuous features approximately follow. Using 5-fold stratified cross-validation, we tuned the hyperparameter \textit{var\_smoothing} and achieved a maximum CV accuracy of \textbf{81.08\%} with $var\_smoothing = 0.325$. The normalization of the dataset reduced the variance of each feature, hence the larger smoothing value.
+
+\subsubsection*{Bernoulli Naive Bayes}
+We experimented with Bernoulli NB as it is well-suited for unnormalized binary data. Bernoulli NB is specifically designed for binary features, representing each feature as a Bernoulli random variable, and \textbf{70/77} features in our dataset are binary. We hypothesized that the Bernoulli NB would be a stronger candidate because it captures binary data features more accurately. We also used \textbf{unnormalized} data to preserve the binary nature of the features. Using 5-fold stratified cross-validation, we achieved an accuracy of \textbf{85.74\%} - noticeably higher than the Gaussian NB. This was achieved with the smoothing hyperparameter $alpha=0.215$ and the threshold hyperparameter $binarize=0.0$ (which sets features greater than 0 equal to 1, and 0 otherwise).
+
+\subsection*{The Ensembles}
+We concluded the hyperparameter tuning portion of the models by comparing their accuracies and performance both individually and when incorporated into a majority vote ensemble with Gradient Boosting and Logistic Regression.
+
+\begin{table}[H]
+\centering
+\caption{CV accuracy across individual models and the ensembles}
+\label{tab:depth}
+\begin{tabular}{ccc}
+\toprule
+\texttt{model} & CV Accuracy & Std \\
+\midrule
+\textbf{Gradient Boosting} & \textbf{0.8974} & \textbf{0.0055} \\
+Logistic Regression & 0.8808 & 0.0044 \\
+Gaussian Naive Bayes & 0.8108 & 0.0163 \\
+Bernoulli Naive Bayes & 0.8547 & 0.0154 \\
+Ensemble (Gaussian NB) & 0.8938 & 0.0069 \\
+Ensemble (Bernoulli NB) & 0.8915 & 0.0081 \\
+\bottomrule
+\end{tabular}
+\end{table}
+Both ensemble accuracies were \textbf{below} the Gradient Boosting
+model's standalone accuracy of \textbf{89.74\%}. Notably, the ensemble
+incorporating Bernoulli NB (\textbf{89.15\%}) performed slightly worse than
+the one incorporating Gaussian NB (\textbf{89.38\%}) despite
+Bernoulli NB having a higher standalone accuracy. This is
+because the ensemble uses a majority vote mechanism, and Bernoulli
+NB was trained and optimized on \textbf{unnormalized} data, while Gradient
+Boosting and Logistic Regression were trained on \textbf{normalized}
+data. Furthermore, Bernoulli NB binarized the \textbf{7/77} features that were numerical, thereby losing the information about their magnitudes. The combination of these two factors frequently created conflicting outputs between the Bernoulli NB and the other two models, negatively impacting the majority-vote ensemble more than the Gaussian NB ensemble. As a result, we concluded that \textbf{Gradient Boosting} alone would be the strongest model for inference.
+
 % --- Placeholder for teammates' models ---
-\subsection*{[Team member 2's model]}
-\textit{[To be filled in by team member.]}
 
-\subsection*{[Team member 3's model]}
-\textit{[To be filled in by team member.]}
+% \subsection*{[Team member 3's model]}
+% \textit{[To be filled in by team member.]}
 
-\subsection*{[Team member 4's model]}
-\textit{[To be filled in by team member.]}
+% \subsection*{[Team member 4's model]}
+% \textit{[To be filled in by team member.]}
 
 % =========================================================
 \section{Model Choice and Hyperparameters}
@@ -212,7 +250,7 @@ The optimal configuration is \texttt{n\_estimators}=200, \texttt{max\_depth}=2, 
 
 \subsection*{Confusion Matrix}
 
-To understand the model's error patterns, we generated a confusion matrix using \texttt{matplotlib} and the function \texttt{cross\_val\_predict} from \texttt{sklearn} 
+To understand the model's error patterns, we generated a confusion matrix using \texttt{matplotlib} and the function \texttt{cross\_val\_predict} from \texttt{sklearn}
 (Figure~\ref{fig:cm}).
 
 \begin{figure}[H]
@@ -270,7 +308,12 @@ Our 5-fold cross-validation accuracy on the training data is 89.7\%. We expect a
 \item Wrote the project report.
 \end{enumerate}
 
-\textbf{[Team member 2]:} \textit{[To be filled in by team member.]}
+\textbf{Yash Khanchandani:}
+\begin{enumerate}
+\item Fine-tuned the hyperparameters of Logistic Regression, Gaussian Naive Bayes, and Bernoulli Naive Bayes, using an exhaustive grid search.
+\item Tested predictions between the validated individual models their majority-vote ensembles to determine the most optimal model to be used for inference.
+\item Wrote the Naive Bayes and Ensemble model explorations in the project report.
+\end{enumerate}
 
 \textbf{[Team member 3]:} \textit{[To be filled in by team member.]}
 
